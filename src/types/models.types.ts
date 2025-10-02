@@ -82,6 +82,11 @@ export interface Lobby {
   spectators: Record<SocketId, Spectator>;
 
   songInfo?: SongInfo;
+  
+  // temporary:
+  //  - true: Single song mode
+  //  - false: Party mode
+  temporary: boolean
 }
 
 export interface LobbyInfo {

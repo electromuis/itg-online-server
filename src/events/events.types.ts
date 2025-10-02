@@ -11,6 +11,7 @@ import {
 export type EventType =
   | 'createLobby'
   | 'joinLobby'
+  | 'joinTemporaryLobby'
   | 'lobbyJoined'
   | 'updateMachine'
   | 'machineUpdated'
@@ -31,6 +32,7 @@ export type EventType =
 export type EventData =
   | CreateLobbyData
   | JoinLobbyPayload
+  | JoinTemporaryLobbyPayload
   | LobbyJoinedPayload
   | UpdateMachinePayload
   | LeaveLobbyPayload
@@ -58,6 +60,11 @@ export interface JoinLobbyPayload {
   machine: Omit<Machine, 'socketId'>;
   code: LobbyCode;
   password: string;
+}
+
+export interface JoinTemporaryLobbyPayload {
+  machine: Omit<Machine, 'socketId'>;
+  songInfo: SongInfo;
 }
 
 export interface LobbyJoinedPayload {

@@ -24,6 +24,7 @@ import {
 import {
   CreateLobbyData,
   JoinLobbyPayload,
+  JoinTemporaryLobbyPayload,
   LobbyLeftPayload,
   LobbySearchedPayload,
   ResponseStatusPayload,
@@ -59,6 +60,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.handlers = {
       createLobby: this.createLobby,
       joinLobby: this.joinLobby,
+      joinTemporaryLobby: this.joinTemporaryLobby,
       leaveLobby: this.leaveLobby,
       spectateLobby: this.spectateLobby,
       searchLobby: this.searchLobby,
@@ -168,6 +170,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         },
       },
       spectators: {},
+      temporary: false
     };
     console.log('Created lobby', { code });
 
@@ -231,6 +234,21 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     LOBBYMAN.machineConnections[socketId] = code;
 
     this.broadcastLobbyState(code);
+
+    return undefined;
+  }
+
+  /**
+   * Connects a machine single song lobby, create one if there's none available.
+   * @param client, The socket that connected.
+   * @param machine, The machine that connected.
+   * @returns True if the machine joined the lobby, false otherwise.
+   */
+  async joinTemporaryLobby(
+    socketId: SocketId,
+    { machine, songInfo }: JoinTemporaryLobbyPayload,
+  ): Promise<EventMessage<ResponseStatusPayload> | undefined> {
+    
 
     return undefined;
   }
