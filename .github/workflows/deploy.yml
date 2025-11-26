@@ -1,0 +1,24 @@
+name: Deployment
+
+on:
+  workflow_run:
+    workflows: [Continuous integration (Build)]
+    types:
+      - completed
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy docker container
+    runs-on: self-hosted
+    steps:
+      - name: Update contaimer image
+        run: |
+          docker pull ghcr.io/${{ github.repository_owner }}/${{ github.repository }}:latest
+      - name: Restart container
+        run: |
+          docker stop itg-online-server || true
+          docker rm itg-online-server || true
+          docker run -d --name itg-online-server -p 3001:3000 ghcr.io/${{ github.repository_owner }}/${{ github.repository }}:latest
+    
+
