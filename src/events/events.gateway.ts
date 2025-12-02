@@ -9,7 +9,6 @@ import {
   LobbyCode,
   LobbyInfo,
   Player,
-  ROOMMAN,
   SocketId,
 } from '../types/models.types';
 import {
@@ -174,8 +173,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     };
     console.log('Created lobby', { code });
 
-    ROOMMAN.join(socketId, code);
-    LOBBYMAN.machineConnections[socketId] = code;
+    LOBBYMAN.join(socketId, code);
 
     this.broadcastLobbyState(code);
     return undefined;
@@ -231,7 +229,6 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       socketId,
     };
     ROOMMAN.join(socketId, code);
-    LOBBYMAN.machineConnections[socketId] = code;
 
     this.broadcastLobbyState(code);
 
@@ -249,6 +246,45 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     { machine, songInfo }: JoinTemporaryLobbyPayload,
   ): Promise<EventMessage<ResponseStatusPayload> | undefined> {
     
+    for (const [code, lobby] of Object.entries(LOBBYMAN.lobbies)) {
+      // Only include temporary lobbies
+      if (!lobby.temporary) continue;
+
+      if(lobby.songInfo?.artist != songInfo.artist ||
+         lobby.songInfo?.title != songInfo.title) {
+          continue;
+      }
+
+      // if joinable ...
+
+      LOBBYMAN.join(socketId, code);
+      this.broadcastLobbyState(code);
+      return undefined;
+    }
+
+    // No available temporary lobby found, create a new one
+
+    let code = generateLobbyCode();
+    while (code in LOBBYMAN.lobbies) {
+      code = generateLobbyCode();
+    }
+
+    LOBBYMAN.lobbies[code] = {
+      code,
+      password: '',
+      machines: {
+        [socketId]: {
+          ...machine,
+          socketId,
+        },
+      },
+      spectators: {},
+      temporary: true
+    };
+    console.log('Created temporary lobby', { code });
+
+    LOBBYMAN.join(socketId, code);
+    this.broadcastLobbyState(code);
 
     return undefined;
   }
@@ -366,8 +402,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       ...spectator,
       socketId,
     };
-    ROOMMAN.join(socketId, code);
-    LOBBYMAN.spectatorConnections[socketId] = code;
+    LOBBYMAN.joinSpectator(socketId, code);
 
     // Broadcasts an updated spectator count to all machines
     // and the initial lobby state for the newly-added spectator
@@ -394,6 +429,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const lobby = this.getLobbyState(code);
     if (lobby) {
       this.clients.sendLobby(lobby, code);
+      this.clients.broadcastTemporaryLobbies();
     }
   }
 
@@ -456,7 +492,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         delete LOBBYMAN.machineConnections[machine.socketId];
       }
 
-      ROOMMAN.leave(machine.socketId, code);
+      LOBBYMAN.leave(machine.socketId, code);
 
       // Don't disconnect here, as we may be re-using the connection.
       // In the case of `leaveLobby`, the client can manually disconnect.
@@ -467,14 +503,13 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (getPlayerCountForLobby(lobby) === 0) {
       for (const spectator of Object.values(lobby.spectators)) {
         if (spectator.socketId) {
-          ROOMMAN.leave(spectator.socketId, code);
+          LOBBYMAN.leave(spectator.socketId, code);
           // Force a disconnect. If there are no more players in the lobby,
           // we should remove the spectators as well.
           this.clients.disconnect(spectator.socketId);
           delete LOBBYMAN.spectatorConnections[spectator.socketId];
         }
       }
-      delete ROOMMAN.rooms[code];
       delete LOBBYMAN.lobbies[code];
     } else {
       // When a client disconnects, notify other clients
@@ -483,6 +518,9 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.clients.sendLobby(stateMessage, code);
       }
     }
+
+    this.clients.broadcastTemporaryLobbies();
+
     return true;
   }
 }

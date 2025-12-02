@@ -96,6 +96,11 @@ export interface LobbyInfo {
   spectatorCount: number;
 }
 
+export interface TemporaryLobbyInfo {
+  songInfo?: SongInfo;
+  joinable: boolean;
+}
+
 export class LOBBYMAN {
   // Mapping from lobby code to a Lobby
   static lobbies: Record<LobbyCode, Lobby>;
@@ -105,44 +110,78 @@ export class LOBBYMAN {
 
   // Mapping from socketId to the lobby code for the spectators.
   static spectatorConnections: Record<SocketId, LobbyCode>;
-}
-
-export class ROOMMAN {
-  // Mapping of lobby ids (rooms) to the socketIds in that room
-  public static rooms: Record<LobbyCode, Array<SocketId>> = {};
 
   static join(socketId: SocketId, code: LobbyCode) {
-    if (!this.rooms[code]) {
-      this.rooms[code] = [];
+    if(!(socketId in this.machineConnections)) {
+      console.warn(`Socket ${socketId} is no machine?`);
+      return;
     }
-    const sockets = this.rooms[code];
+
+    if (!this.lobbies[code]) {
+      console.warn(`Lobby ${code} does not exist`);
+      return;
+    }
+
+    const sockets = Object.keys(this.lobbies[code].machines);
     if (sockets.includes(socketId)) {
       console.warn(`Socket ${socketId} is already in room ${code}`);
       return;
     }
     console.info(`Socket ${socketId} is joining room ${code}`);
-    sockets.push(socketId);
+    // sockets.push(socketId); ?
+    this.machineConnections[socketId] = code;
+  }
+
+  static joinSpectator(socketId: SocketId, code: LobbyCode) {
+    if(socketId in this.spectatorConnections || socketId in this.machineConnections) {
+      console.warn(`Socket ${socketId} already connected`);
+      return;
+    }
+
+    if (!this.lobbies[code]) {
+      console.warn(`Lobby ${code} does not exist`);
+      return;
+    }
+
+    const sockets = Object.keys(this.lobbies[code].spectators);
+    if (sockets.includes(socketId)) {
+      console.warn(`Socket ${socketId} is already spectating room ${code}`);
+      return;
+    }
+
+    console.info(`Socket ${socketId} is spectating room ${code}`);
+    this.spectatorConnections[socketId] = code;
   }
 
   static leave(socketId: SocketId, code: LobbyCode) {
-    if (!this.rooms[code]) {
+    if (!this.lobbies[code]) {
       console.warn(`No room for code ${code}`);
       return;
     }
-    const sockets = this.rooms[code];
+
+    const sockets = Object.keys(this.lobbies[code].machines);
     if (!sockets) {
       throw new Error('No socket with code ' + code); // Shouldn't happen, since we set the code right before this
     }
+
     if (!sockets.includes(socketId)) {
       console.warn(`Socket ${socketId} is not in room ${code}`);
       return;
     }
+    
     console.info(`Socket ${socketId} is leaving room ${code}`);
-    this.rooms[code] = sockets.filter((s) => s !== socketId);
+    delete this.lobbies[code].machines[socketId];
+    if(this.machineConnections[socketId]) {
+      delete this.machineConnections[socketId];
+    }
+    if(this.spectatorConnections[socketId]) {
+      delete this.spectatorConnections[socketId];
+    }
   }
 
   static isJoined(socketId: SocketId, code: LobbyCode): boolean {
-    if (!this.rooms[code]) return false;
-    return Boolean(this.rooms[code].includes(socketId));
+    if (!this.lobbies[code]) return false;
+    if(!this.lobbies[code].machines[socketId] && !this.lobbies[code].spectators[socketId]) return false;
+    return true;
   }
 }

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import WebSocket = require('ws');
-import { EventMessage } from '../events/events.types';
-import { SocketId, LobbyCode, ROOMMAN } from '../types/models.types';
+import { EventMessage, TemporaryLobbiesUpdatePayload } from '../events/events.types';
+import { SocketId, LobbyCode, TemporaryLobbyInfo, ROOMMAN, LOBBYMAN } from '../types/models.types';
 import { v4 as uuid } from 'uuid';
 @Injectable()
 export class ClientService {
@@ -13,6 +13,30 @@ export class ClientService {
       if (socket === targetSocket) return socketId;
     }
     throw new Error('Socket not found');
+  }
+
+  broadcastTemporaryLobbies() {
+    const temporaryLobbies: Record<
+      LobbyCode,
+      TemporaryLobbyInfo
+    > = {};
+
+    for (const [code, lobby] of Object.entries(LOBBYMAN.lobbies)) {
+      // Only include temporary lobbies
+      if (!lobby.temporary) continue;
+
+      temporaryLobbies[code] = {
+        songInfo: lobby.songInfo,
+        joinable: true
+      };
+    }
+
+    const message: EventMessage<TemporaryLobbiesUpdatePayload> = {
+      event: 'temporaryLobbiesUpdate',
+      data: { lobbies: Object.values(temporaryLobbies) },
+    };
+
+    this.sendAll(message);
   }
 
   /** Sends a message to all connected clients */

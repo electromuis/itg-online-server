@@ -1,6 +1,7 @@
 import {
   LobbyCode,
   LobbyInfo,
+  TemporaryLobbyInfo,
   Machine,
   Player,
   PlayerId,
@@ -21,6 +22,7 @@ export type EventType =
   | 'lobbySpectated'
   | 'searchLobby'
   | 'lobbySearched'
+  | 'temporaryLobbiesUpdate'
   | 'clientDisconnected'
   | 'readyUp'
   | 'readyUpResult'
@@ -101,6 +103,10 @@ export interface SearchLobbyPayload {}
 
 export interface LobbySearchedPayload {
   lobbies: LobbyInfo[];
+}
+
+export interface TemporaryLobbiesUpdatePayload {
+  lobbies: TemporaryLobbyInfo[];
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface

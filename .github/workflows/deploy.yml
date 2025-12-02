@@ -5,6 +5,8 @@ on:
     workflows: [Continuous integration (Build)]
     types:
       - completed
+    branches:
+      - 'testing'
   workflow_dispatch:
 
 jobs:
