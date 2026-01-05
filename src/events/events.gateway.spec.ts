@@ -57,12 +57,12 @@ describe('EventsGateway', () => {
         event: 'createLobby',
         data: {
           machine: {
-            player1: {
+            screenName: 'ScreenSelectMusic',
+            players: [{
               playerId: 'P1',
-              profileName: 'teejusb',
-              screenName: 'ScreenSelectMusic',
+              name: 'teejusb',
               ready: false,
-            },
+            }],
           },
           password: '',
         },
@@ -160,22 +160,22 @@ describe('EventsGateway', () => {
         event: 'createLobby',
         data: {
           machine: {
-            player1: {
+            screenName: 'ScreenSelectMusic',
+            players: [{
               playerId: 'P1',
-              profileName: 'teejusb',
-              screenName: 'ScreenSelectMusic',
+              name: 'teejusb',
               ready: false,
-            },
+            }],
           },
           password: '',
         },
       });
       const update1: UpdateMachinePayload = {
         machine: {
-          player1: {
+          screenName: 'ScreenGameplay',
+          players: [{
             playerId: 'P1',
-            profileName: 'teejusb',
-            screenName: 'ScreenGameplay',
+            name: 'teejusb',
             ready: false,
             score: 0.99,
             songProgression: {
@@ -183,13 +183,12 @@ describe('EventsGateway', () => {
               totalTime: 2,
             },
           },
-          player2: {
+          {
             playerId: 'P2',
-            profileName: 'Moistbruh',
-            screenName: 'ScreenGameplay',
+            name: 'Moistbruh',
             ready: false,
             score: 0.99,
-          },
+          }],
         },
       };
       await send<UpdateMachinePayload, ResponseStatusPayload>(client, {
@@ -204,19 +203,18 @@ describe('EventsGateway', () => {
       // The songInfo/scores should persist
       const update2: UpdateMachinePayload = {
         machine: {
-          player1: {
+          screenName: 'ScreenGameplay',
+          players: [{
             playerId: 'P1',
-            profileName: 'teejusb',
-            screenName: 'ScreenSelectMusic',
+            name: 'teejusb',
             ready: false,
           },
-          player2: {
+          {
             playerId: 'P2',
-            profileName: 'Moistbruh',
-            screenName: 'ScreenGameplay',
+            name: 'Moistbruh',
             ready: false,
             score: 0.99,
-          },
+          }],
         },
       };
       await send<UpdateMachinePayload, ResponseStatusPayload>(client, {
@@ -224,26 +222,25 @@ describe('EventsGateway', () => {
         data: update2,
       });
 
-      expect(machine.player1).toBeDefined();
-      expect(machine.player1?.screenName).toEqual('ScreenSelectMusic');
-      expect(machine.player1?.score).toBeDefined();
-      expect(machine.player1?.songProgression).toBeDefined();
+      expect(machine.players).toHaveLength(1);
+      expect(machine.screenName).toEqual('ScreenSelectMusic');
+      expect(machine.players[0]?.score).toBeDefined();
+      expect(machine.players[0]?.songProgression).toBeDefined();
 
       // Now we go back to select music, it should wipe songInfo/scores
       const update3: UpdateMachinePayload = {
         machine: {
-          player1: {
+          screenName: 'ScreenSelectMusic',
+          players: [{
             playerId: 'P1',
-            profileName: 'teejusb',
-            screenName: 'ScreenSelectMusic',
+            name: 'teejusb',
             ready: false,
           },
-          player2: {
+          {
             playerId: 'P2',
-            profileName: 'Moistbruh',
-            screenName: 'ScreenSelectMusic',
+            name: 'Moistbruh',
             ready: false,
-          },
+          }],
         },
       };
       await send<UpdateMachinePayload, ResponseStatusPayload>(client, {
@@ -251,10 +248,10 @@ describe('EventsGateway', () => {
         data: update3,
       });
 
-      expect(machine.player1).toBeDefined();
-      expect(machine.player1?.screenName).toEqual('ScreenSelectMusic');
-      expect(machine.player1?.score).toBeUndefined();
-      expect(machine.player1?.songProgression).toBeUndefined();
+      expect(machine.players).toHaveLength(1);
+      expect(machine.screenName).toEqual('ScreenSelectMusic');
+      expect(machine.players[0]?.score).toBeUndefined();
+      expect(machine.players[0]?.songProgression).toBeUndefined();
     });
   });
 
@@ -263,12 +260,12 @@ describe('EventsGateway', () => {
       event: 'createLobby',
       data: {
         machine: {
-          player1: {
+          screenName: 'ScreenSelectMusic',
+          players: [{
             playerId: 'P1',
-            profileName: 'teejusb',
-            screenName: 'ScreenSelectMusic',
+            name: 'teejusb',
             ready: false,
-          },
+          }],
         },
         password: '',
       },

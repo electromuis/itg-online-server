@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import WebSocket = require('ws');
 import { EventMessage, TemporaryLobbiesUpdatePayload } from '../events/events.types';
-import { SocketId, LobbyCode, TemporaryLobbyInfo, ROOMMAN, LOBBYMAN } from '../types/models.types';
+import { SocketId, LobbyCode, TemporaryLobbyInfo, LOBBYMAN } from '../types/models.types';
 import { v4 as uuid } from 'uuid';
+import { getPlayerCountForLobby } from '../events/utils';
 @Injectable()
 export class ClientService {
   // Mapping from socketId to the lobby code for the spectators.
@@ -27,7 +28,9 @@ export class ClientService {
 
       temporaryLobbies[code] = {
         songInfo: lobby.songInfo,
-        joinable: true
+        joinable: true,
+        playerCount: getPlayerCountForLobby(lobby),
+        spectatorCount: Object.keys(lobby.spectators).length,
       };
     }
 
@@ -62,7 +65,7 @@ export class ClientService {
   sendLobby(response: EventMessage, code: LobbyCode) {
     for (const [socketId, socket] of Object.entries(this.clients)) {
       // skip clients not in the lobby
-      if (!ROOMMAN.isJoined(socketId, code)) return;
+      if (!LOBBYMAN.isJoined(socketId, code)) return;
 
       if (socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify(response));

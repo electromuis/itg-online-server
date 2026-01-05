@@ -99,7 +99,9 @@ export interface LobbySpectatedPayload {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
-export interface SearchLobbyPayload {}
+export interface SearchLobbyPayload {
+  temporary?: boolean;
+}
 
 export interface LobbySearchedPayload {
   lobbies: LobbyInfo[];

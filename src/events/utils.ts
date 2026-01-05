@@ -2,7 +2,6 @@ import {
   LOBBYMAN,
   Lobby,
   Player,
-  ROOMMAN,
   SocketId,
 } from '../types/models.types';
 import { EventMessage, EventType, ResponseStatusPayload } from './events.types';
@@ -11,8 +10,7 @@ import { EventMessage, EventType, ResponseStatusPayload } from './events.types';
  *  @see updateMachine */
 export const RETAINED_PLAYER_KEYS: Array<keyof Player> = [
   'playerId',
-  'profileName',
-  'screenName',
+  'name',
   'ready',
 ];
 
@@ -60,12 +58,7 @@ export function generateLobbyCode(): string {
 export function getPlayerCountForLobby(lobby: Lobby): number {
   let playerCount = 0;
   for (const machine of Object.values(lobby.machines)) {
-    if (machine.player1 !== undefined) {
-      playerCount += 1;
-    }
-    if (machine.player2 !== undefined) {
-      playerCount += 1;
-    }
+    playerCount += machine.players.length;
   }
   return playerCount;
 }
@@ -92,7 +85,7 @@ export function disconnectSpectator(socketId: SocketId): boolean {
   }
 
   if (spectator.socketId) {
-    ROOMMAN.leave(spectator.socketId, code);
+    LOBBYMAN.leave(spectator.socketId, code);
     // Don't disconnect here, as we may be re-using the connection.
   }
   delete lobby.spectators[socketId];
@@ -145,12 +138,8 @@ export function responseStatusFailure(
 
 export function inSongSelect(lobby: Lobby): boolean {
   let selecting = true;
-  Object.values(lobby.machines).forEach(({ player1, player2 }) => {
-    if (player1 && player1.screenName !== 'ScreenSelectMusic') {
-      selecting = false;
-      return;
-    }
-    if (player2 && player2.screenName !== 'ScreenSelectMusic') {
+  Object.values(lobby.machines).forEach(({ screenName }) => {
+    if (screenName !== 'ScreenSelectMusic') {
       selecting = false;
       return;
     }

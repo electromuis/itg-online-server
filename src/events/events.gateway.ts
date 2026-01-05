@@ -8,6 +8,8 @@ import {
   LOBBYMAN,
   LobbyCode,
   LobbyInfo,
+  TemporaryLobbyInfo,
+  Lobby,
   Player,
   SocketId,
 } from '../types/models.types';
@@ -33,6 +35,8 @@ import {
   UpdateMachinePayload,
   SelectSongPayload,
   LobbyStatePayload,
+  SearchLobbyPayload,
+  TemporaryLobbiesUpdatePayload,
 } from './events.types';
 import { merge, pick } from 'lodash';
 
@@ -98,7 +102,8 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
         // Retain "this" context within the handler callbacks (otherwise we lose this.clients)
         const handlerBinded = handler.bind(this);
-        const response = await handlerBinded(socketId, message.data);
+        const messageData = message.data || {};
+        const response = await handlerBinded(socketId, messageData);
         if (response) {
           this.clients.sendSocket(response, socketId);
         }
@@ -228,7 +233,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       ...machine,
       socketId,
     };
-    ROOMMAN.join(socketId, code);
+    LOBBYMAN.join(socketId, code);
 
     this.broadcastLobbyState(code);
 
@@ -272,12 +277,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     LOBBYMAN.lobbies[code] = {
       code,
       password: '',
-      machines: {
-        [socketId]: {
-          ...machine,
-          socketId,
-        },
-      },
+      machines: {},
       spectators: {},
       temporary: true
     };
@@ -313,12 +313,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       lobby.songInfo = undefined;
       Object.values(lobby.machines).forEach((machine) => {
         // Only retain relevant fields
-        if (machine.player1) {
-          machine.player1 = pick(machine.player1, RETAINED_PLAYER_KEYS);
-        }
-        if (machine.player2) {
-          machine.player2 = pick(machine.player2, RETAINED_PLAYER_KEYS);
-        }
+        machine.players = machine.players.map(p => pick(p, RETAINED_PLAYER_KEYS))
       });
     }
 
@@ -415,21 +410,36 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * Searches for all active lobbies.
    * @returns, The list of lobbies that are currently active.
    */
-  async searchLobby(): Promise<EventMessage<LobbySearchedPayload>> {
-    const lobbies: LobbyInfo[] = Object.values(LOBBYMAN.lobbies).map((l) => ({
-      code: l.code,
-      isPasswordProtected: l.password.length !== 0,
-      playerCount: getPlayerCountForLobby(l),
-      spectatorCount: Object.keys(l.spectators).length,
-    }));
-    return { event: 'lobbySearched', data: { lobbies } };
+  async searchLobby(
+    socketId: SocketId,
+    { temporary }: SearchLobbyPayload,
+  ): Promise<EventMessage<LobbySearchedPayload|TemporaryLobbiesUpdatePayload>> {
+    let lobbies: Lobby[] = Object.values(LOBBYMAN.lobbies);
+    lobbies = lobbies.filter(l => l.temporary == temporary)
+    if(!temporary) {
+      const lobbiesResponse: LobbyInfo[] = lobbies.map((l) => ({
+        code: l.code,
+        isPasswordProtected: l.password.length !== 0,
+        playerCount: getPlayerCountForLobby(l),
+        spectatorCount: Object.keys(l.spectators).length,
+      }));
+      return { event: 'lobbySearched', data: { lobbies: lobbiesResponse } };
+    } else {
+      const lobbiesResponse: TemporaryLobbyInfo[] = lobbies.map((l) => ({
+        songInfo: l.songInfo,
+        joinable: true,
+        playerCount: getPlayerCountForLobby(l),
+        spectatorCount: Object.keys(l.spectators).length,
+      }));
+      return { event: 'temporaryLobbiesUpdate', data: { lobbies: lobbiesResponse } };
+    }
   }
 
   private broadcastLobbyState(code: LobbyCode) {
     const lobby = this.getLobbyState(code);
     if (lobby) {
       this.clients.sendLobby(lobby, code);
-      this.clients.broadcastTemporaryLobbies();
+      // this.clients.broadcastTemporaryLobbies();
     }
   }
 
@@ -440,13 +450,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const players: Player[] = [];
     const lobby = LOBBYMAN.lobbies[code];
     Object.values(lobby.machines).forEach((machine) => {
-      const { player1, player2 } = machine;
-      if (player1) {
-        players.push(player1);
-      }
-      if (player2) {
-        players.push(player2);
-      }
+      machine.players.forEach(p => players.push(p));
     });
     const { songInfo } = lobby;
 
@@ -457,7 +461,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
           if (p1.exScore && p2.exScore) {
             return p2.exScore - p1.exScore;
           }
-          return p1.profileName > p2.profileName ? 1 : -1;
+          return p1.name > p2.name ? 1 : -1;
         }),
         songInfo,
         code,

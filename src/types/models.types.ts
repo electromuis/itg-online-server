@@ -49,13 +49,7 @@ export interface SongInfo {
 
 export interface Player {
   playerId: PlayerId;
-  profileName: string;
-  screenName:
-    | 'NoScreen'
-    | 'ScreenSelectMusic'
-    | 'ScreenGameplay'
-    | 'ScreenPlayerOptions'
-    | 'ScreenEvaluation';
+  name: string;
   ready: boolean;
 
   judgments?: Judgments;
@@ -68,8 +62,13 @@ export interface Player {
 }
 
 export interface Machine {
-  player1?: Player;
-  player2?: Player;
+  players: Player[];
+  screenName:
+    | 'NoScreen'
+    | 'ScreenSelectMusic'
+    | 'ScreenGameplay'
+    | 'ScreenPlayerOptions'
+    | 'ScreenEvaluation';
   socketId?: SocketId;
 }
 
@@ -99,6 +98,8 @@ export interface LobbyInfo {
 export interface TemporaryLobbyInfo {
   songInfo?: SongInfo;
   joinable: boolean;
+  playerCount: number;
+  spectatorCount: number;
 }
 
 export class LOBBYMAN {
@@ -112,23 +113,19 @@ export class LOBBYMAN {
   static spectatorConnections: Record<SocketId, LobbyCode>;
 
   static join(socketId: SocketId, code: LobbyCode) {
-    if(!(socketId in this.machineConnections)) {
-      console.warn(`Socket ${socketId} is no machine?`);
-      return;
-    }
-
     if (!this.lobbies[code]) {
       console.warn(`Lobby ${code} does not exist`);
       return;
     }
-
-    const sockets = Object.keys(this.lobbies[code].machines);
-    if (sockets.includes(socketId)) {
+    
+    const lobby = this.lobbies[code];
+    if(Object.keys(lobby.machines).includes(socketId)) {
       console.warn(`Socket ${socketId} is already in room ${code}`);
       return;
     }
+
     console.info(`Socket ${socketId} is joining room ${code}`);
-    // sockets.push(socketId); ?
+    lobby.machines[socketId] = { };
     this.machineConnections[socketId] = code;
   }
 
