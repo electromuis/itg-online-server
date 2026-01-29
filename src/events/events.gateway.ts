@@ -542,7 +542,13 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const players: Player[] = [];
     const lobby = LOBBYMAN.lobbies[code];
     Object.values(lobby.machines).forEach((machine) => {
-      machine.players.forEach(p => players.push(p));
+      machine.players.forEach(p => {
+        if(!p.score) p.score = 0
+        if(!p.exScore) p.exScore = 0
+        if(!p.failed) p.failed = false
+
+        players.push(p)
+      });
     });
     const { songInfo } = lobby;
 
