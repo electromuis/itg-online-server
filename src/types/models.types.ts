@@ -104,7 +104,7 @@ export interface LobbyInfo {
 }
 
 export interface TemporaryLobbyInfo {
-  songInfo?: SongInfo;
+  songInfo: SongInfo;
   joinable: boolean;
   playerCount: number;
   spectatorCount: number;

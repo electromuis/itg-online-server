@@ -25,6 +25,7 @@ export class ClientService {
     for (const [code, lobby] of Object.entries(LOBBYMAN.lobbies)) {
       // Only include temporary lobbies
       if (!lobby.temporary) continue;
+      if(lobby.songInfo === undefined) continue;
 
       temporaryLobbies[code] = {
         songInfo: lobby.songInfo,

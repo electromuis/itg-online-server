@@ -349,7 +349,8 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
           password: '',
           machines: {},
           spectators: {},
-          temporary: true
+          temporary: true,
+          songInfo
         };
         console.log('Created temporary lobby', { code });
         joinableCode = code;
@@ -510,12 +511,18 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }));
       return { event: 'lobbySearched', data: { lobbies: lobbiesResponse } };
     } else {
-      const lobbiesResponse: TemporaryLobbyInfo[] = lobbies.map((l) => ({
-        songInfo: l.songInfo,
-        joinable: true,
-        playerCount: getPlayerCountForLobby(l),
-        spectatorCount: Object.keys(l.spectators).length,
-      }));
+      const lobbiesResponse: TemporaryLobbyInfo[] = [];
+      lobbies.forEach(l => {
+        if(l.songInfo !== undefined) {
+          lobbiesResponse.push({
+            songInfo: l.songInfo,
+            joinable: true,
+            playerCount: getPlayerCountForLobby(l),
+            spectatorCount: Object.keys(l.spectators).length,
+          })
+        }
+      })
+      
       return { event: 'temporaryLobbiesUpdate', data: { lobbies: lobbiesResponse } };
     }
   }
