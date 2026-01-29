@@ -37,10 +37,12 @@ import {
   LobbyStatePayload,
   SearchLobbyPayload,
   TemporaryLobbiesUpdatePayload,
+  StartSongPayload
 } from './events.types';
 import { merge, pick } from 'lodash';
 
 import { ClientService } from '../clients/client.service';
+import { join } from 'path';
 
 @WebSocketGateway({
   cors: {
@@ -70,6 +72,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       updateMachine: this.updateMachine,
       lobbyState: this.lobbyState,
       selectSong: this.selectSong,
+      startSong: this.startSong
     };
   }
 
@@ -184,6 +187,64 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     return undefined;
   }
 
+  async startSong(
+    socketId: SocketId,
+    { phase }: StartSongPayload
+  ): Promise<EventMessage<ResponseStatusPayload> | undefined> {
+    const code = LOBBYMAN.machineConnections[socketId];
+    if (!code) {
+      console.log('Machine not found')
+      return responseStatusFailure('startSong', 'Machine not found');
+    }
+
+    const lobby = LOBBYMAN.lobbies[code];
+    const {machines} = lobby;
+
+    console.log('Start phase: %d', phase)
+
+    if(phase == 1) {
+      const players: Player[] = []
+      Object.values(machines).forEach((machine) => {
+        machine.players.forEach(p => players.push(p));
+      })
+
+      const notReady = players.filter(p => {
+        return !p.ready
+      })
+
+      if(notReady.length == 0) {
+        this.clients.sendAll({
+          event: 'startSong',
+          data: {
+            phase: 2
+          }
+        })
+        lobby.startPhase = 2
+      } else {
+        console.log('Waiting for everyone to be ready (1)')
+      }
+    }
+
+    if(phase == 3) {
+      const notReady = Object.values(machines).filter(m => {
+        return m.startPhase != 3
+      })
+      if(notReady.length == 0) {
+        this.clients.sendAll({
+          event: 'startSong',
+          data: {
+            phase: 4
+          }
+        })
+        lobby.startPhase = 4
+      } else {
+        console.log('Waiting for everyone to be ready (2)')
+      }
+    }
+
+    return undefined
+  }
+
   /**
    * Connects a machine to an existing lobby.
    * @param client, The socket that connected.
@@ -237,7 +298,13 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     this.broadcastLobbyState(code);
 
-    return undefined;
+    return {
+      event: 'responseStatus',
+      data: {
+        event: 'joinLobby',
+        success: true
+      },
+    };
   }
 
   /**
@@ -251,42 +318,59 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     { machine, songInfo }: JoinTemporaryLobbyPayload,
   ): Promise<EventMessage<ResponseStatusPayload> | undefined> {
     
-    for (const [code, lobby] of Object.entries(LOBBYMAN.lobbies)) {
-      // Only include temporary lobbies
-      if (!lobby.temporary) continue;
+    let joinableCode = undefined;
 
-      if(lobby.songInfo?.artist != songInfo.artist ||
-         lobby.songInfo?.title != songInfo.title) {
-          continue;
+    try {
+      for (const [code, lobby] of Object.entries(LOBBYMAN.lobbies)) {
+        // Only include temporary lobbies
+        if (!lobby.temporary) continue;
+
+        if(lobby.songInfo?.artist != songInfo.artist ||
+          lobby.songInfo?.title != songInfo.title) {
+            continue;
+        }
+
+        // if joinable ...
+        
+        joinableCode = code;
+        break;
       }
 
-      // if joinable ...
+      if(!joinableCode) {
+        // No available temporary lobby found, create a new one
 
-      LOBBYMAN.join(socketId, code);
-      this.broadcastLobbyState(code);
-      return undefined;
+        let code = generateLobbyCode();
+        while (code in LOBBYMAN.lobbies) {
+          code = generateLobbyCode();
+        }
+
+        LOBBYMAN.lobbies[code] = {
+          code,
+          password: '',
+          machines: {},
+          spectators: {},
+          temporary: true
+        };
+        console.log('Created temporary lobby', { code });
+        joinableCode = code;
+      }
+
+      if(!LOBBYMAN.join(socketId, joinableCode)) {
+        return responseStatusFailure('joinTemporaryLobby', 'Failed to join lobby');
+      }
+      this.broadcastLobbyState(joinableCode);
+
+      return {
+        event: 'responseStatus',
+        data: {
+          event: 'joinTemporaryLobby',
+          success: true
+        },
+      };
+        
+    } catch (e) {
+      return responseStatusFailure('joinTemporaryLobby', 'Failed to join lobby');
     }
-
-    // No available temporary lobby found, create a new one
-
-    let code = generateLobbyCode();
-    while (code in LOBBYMAN.lobbies) {
-      code = generateLobbyCode();
-    }
-
-    LOBBYMAN.lobbies[code] = {
-      code,
-      password: '',
-      machines: {},
-      spectators: {},
-      temporary: true
-    };
-    console.log('Created temporary lobby', { code });
-
-    LOBBYMAN.join(socketId, code);
-    this.broadcastLobbyState(code);
-
-    return undefined;
   }
 
   /**
@@ -318,6 +402,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     this.broadcastLobbyState(lobby.code);
+    
     return undefined;
   }
 
@@ -458,8 +543,8 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       event: 'lobbyState',
       data: {
         players: players.sort((p1, p2) => {
-          if (p1.exScore && p2.exScore) {
-            return p2.exScore - p1.exScore;
+          if (p1.score && p2.score) {
+            return p2.score - p1.score;
           }
           return p1.name > p2.name ? 1 : -1;
         }),

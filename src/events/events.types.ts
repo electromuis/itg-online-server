@@ -137,5 +137,5 @@ export interface LobbyStatePayload {
 }
 
 export interface StartSongPayload {
-  start: boolean;
+  phase: number;
 }

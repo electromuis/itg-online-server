@@ -51,10 +51,16 @@ export interface Player {
   playerId: PlayerId;
   name: string;
   ready: boolean;
+  ping?: number;
+
+  diffLevel?: number;
+  diffType?: string;
 
   judgments?: Judgments;
   score?: number;
   exScore?: number;
+  health?: number;
+  failed?: boolean;
   songProgression?: {
     currentTime: number;
     totalTime: number;
@@ -69,6 +75,7 @@ export interface Machine {
     | 'ScreenGameplay'
     | 'ScreenPlayerOptions'
     | 'ScreenEvaluation';
+  startPhase?: number;
   socketId?: SocketId;
 }
 
@@ -86,6 +93,7 @@ export interface Lobby {
   //  - true: Single song mode
   //  - false: Party mode
   temporary: boolean
+  startPhase?: number
 }
 
 export interface LobbyInfo {
@@ -115,18 +123,24 @@ export class LOBBYMAN {
   static join(socketId: SocketId, code: LobbyCode) {
     if (!this.lobbies[code]) {
       console.warn(`Lobby ${code} does not exist`);
-      return;
+      return false;
     }
     
     const lobby = this.lobbies[code];
     if(Object.keys(lobby.machines).includes(socketId)) {
       console.warn(`Socket ${socketId} is already in room ${code}`);
-      return;
+      return false;
     }
 
     console.info(`Socket ${socketId} is joining room ${code}`);
-    lobby.machines[socketId] = { };
+    if(!(socketId in lobby.machines)) {
+      lobby.machines[socketId] = {
+        players: [],
+        screenName: 'NoScreen'
+      };
+    }
     this.machineConnections[socketId] = code;
+    return true;
   }
 
   static joinSpectator(socketId: SocketId, code: LobbyCode) {
