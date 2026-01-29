@@ -133,13 +133,12 @@ export class LOBBYMAN {
     }
 
     console.info(`Socket ${socketId} is joining room ${code}`);
-    if(!(socketId in lobby.machines)) {
-      lobby.machines[socketId] = {
-        players: [],
-        screenName: 'NoScreen'
-      };
-    }
     this.machineConnections[socketId] = code;
+    lobby.machines[socketId] = {
+      players: [],
+      screenName: 'NoScreen'
+    };
+    
     return true;
   }
 
@@ -192,7 +191,9 @@ export class LOBBYMAN {
 
   static isJoined(socketId: SocketId, code: LobbyCode): boolean {
     if (!this.lobbies[code]) return false;
-    if(!this.lobbies[code].machines[socketId] && !this.lobbies[code].spectators[socketId]) return false;
+    const {machines, spectators} = this.lobbies[code]
+    if(!(socketId in machines) && !(socketId in spectators)) return false;
+
     return true;
   }
 }

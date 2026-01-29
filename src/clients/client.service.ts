@@ -66,9 +66,10 @@ export class ClientService {
   sendLobby(response: EventMessage, code: LobbyCode) {
     for (const [socketId, socket] of Object.entries(this.clients)) {
       // skip clients not in the lobby
-      if (!LOBBYMAN.isJoined(socketId, code)) return;
+      if (!LOBBYMAN.isJoined(socketId, code)) continue;
 
       if (socket.readyState === WebSocket.OPEN) {
+        console.log('Sending .. %s', socketId)
         socket.send(JSON.stringify(response));
       }
     }
