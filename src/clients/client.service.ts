@@ -69,7 +69,6 @@ export class ClientService {
       if (!LOBBYMAN.isJoined(socketId, code)) continue;
 
       if (socket.readyState === WebSocket.OPEN) {
-        console.log('Sending .. %s', socketId)
         socket.send(JSON.stringify(response));
       }
     }

@@ -152,7 +152,9 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async createLobby(
     socketId: string,
     { machine, password }: CreateLobbyData,
-  ): Promise<undefined> {
+  ): Promise<EventMessage<ResponseStatusPayload> | undefined> {
+	console.log(JSON.stringify(machine))
+
     if (socketId in LOBBYMAN.spectatorConnections) {
       disconnectSpectator(socketId);
     }
@@ -170,21 +172,28 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     LOBBYMAN.lobbies[code] = {
       code,
       password: password || '',
-      machines: {
-        [socketId]: {
-          ...machine,
-          socketId,
-        },
-      },
+      machines: {},
       spectators: {},
-      temporary: false
+      leftPlayers: [],
+      temporary: false,
+      state: 'ScreenSelectMusic'
     };
     console.log('Created lobby', { code });
 
-    LOBBYMAN.join(socketId, code);
+    if(!LOBBYMAN.join(socketId, code, machine)) {
+		return responseStatusFailure('createLobby', 'Failed to join lobby');
+	}
 
+	console.log(JSON.stringify(Object.values(LOBBYMAN.lobbies[code].machines)))
     this.broadcastLobbyState(code);
-    return undefined;
+    
+    return {
+      event: 'responseStatus',
+      data: {
+        event: 'createLobby',
+        success: true
+      },
+    };
   }
 
   async startSong(
@@ -200,9 +209,9 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const lobby = LOBBYMAN.lobbies[code];
     const {machines} = lobby;
 
-    console.log('Start phase: %d', phase)
+    console.log('Start phase: %s', phase)
 
-    if(phase == 1) {
+    if(phase == "ScreenGameplayWaiting") {
       const players: Player[] = []
       Object.values(machines).forEach((machine) => {
         machine.players.forEach(p => players.push(p));
@@ -213,30 +222,33 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       })
 
       if(notReady.length == 0) {
+        lobby.state = 'Loading'
+
         this.clients.sendAll({
           event: 'startSong',
           data: {
-            phase: 2
+            phase: 'ScreenGameplayWaiting'
           }
         })
-        lobby.startPhase = 2
+        
       } else {
         console.log('Waiting for everyone to be ready (1)')
       }
     }
 
-    if(phase == 3) {
+    if(phase == 'ScreenGameplay') {
       const notReady = Object.values(machines).filter(m => {
-        return m.startPhase != 3
+        return m.screenName != 'ScreenGameplay'
       })
       if(notReady.length == 0) {
+        lobby.state = 'ScreenGameplay' // Allow new song selection
+        
         this.clients.sendAll({
           event: 'startSong',
           data: {
-            phase: 4
+            phase: 'ScreenGameplay'
           }
         })
-        lobby.startPhase = 4
       } else {
         console.log('Waiting for everyone to be ready (2)')
       }
@@ -257,7 +269,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     socketId: SocketId,
     { machine, code, password }: JoinLobbyPayload,
   ): Promise<EventMessage<ResponseStatusPayload> | undefined> {
-    if (!canJoinLobby(code, password)) {
+    if (!canJoinLobby(code, password ? password : '')) {
       return {
         event: 'responseStatus',
         data: {
@@ -290,11 +302,11 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       );
     }
 
-    lobby.machines[socketId] = {
-      ...machine,
-      socketId,
-    };
-    LOBBYMAN.join(socketId, code);
+    // lobby.machines[socketId] = {
+    //   ...machine,
+    //   socketId,
+    // };
+    LOBBYMAN.join(socketId, code, machine);
 
     this.broadcastLobbyState(code);
 
@@ -349,14 +361,16 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
           password: '',
           machines: {},
           spectators: {},
+          leftPlayers: [],
           temporary: true,
-          songInfo
+          songInfo,
+          state: 'ScreenSelectMusic'
         };
         console.log('Created temporary lobby', { code });
         joinableCode = code;
       }
 
-      if(!LOBBYMAN.join(socketId, joinableCode)) {
+      if(!LOBBYMAN.join(socketId, joinableCode, machine)) {
         return responseStatusFailure('joinTemporaryLobby', 'Failed to join lobby');
       }
       this.broadcastLobbyState(joinableCode);
@@ -432,9 +446,20 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
     const lobby = LOBBYMAN.lobbies[code];
     if (lobby.songInfo) {
-      return responseStatusFailure('selectSong', 'Song already selected');
+		if(lobby.state != 'ScreenGameplay') {
+      		return responseStatusFailure('selectSong', 'Song already selected');
+		} else {
+			lobby.state = 'ScreenSelectMusic';
+		}
     }
     lobby.songInfo = songInfo;
+    this.clients.sendLobby({
+      event: 'selectSong',
+      data: {
+          songInfo
+      }
+    }, code)
+    console.log(`Song selected in lobby ${code}: ${songInfo.artist} - ${songInfo.title}`);
 
     this.broadcastLobbyState(code);
 
@@ -541,6 +566,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // Send back the machine state with the socket ids omitted
     const players: Player[] = [];
     const lobby = LOBBYMAN.lobbies[code];
+    
     Object.values(lobby.machines).forEach((machine) => {
       machine.players.forEach(p => {
         if(!p.score) p.score = 0
@@ -550,6 +576,14 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         players.push(p)
       });
     });
+    lobby.leftPlayers.forEach(p => {
+      if(!p.score) p.score = 0
+      if(!p.exScore) p.exScore = 0
+      if(!p.failed) p.failed = false
+
+      players.push(p)
+    })
+
     const { songInfo } = lobby;
 
     return {
@@ -563,6 +597,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }),
         songInfo,
         code,
+        temporary: lobby.temporary
       },
     };
   }
@@ -590,17 +625,11 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     if (machine.socketId) {
-      if (machine.socketId in LOBBYMAN.machineConnections) {
-        delete LOBBYMAN.machineConnections[machine.socketId];
-      }
-
       LOBBYMAN.leave(machine.socketId, code);
 
-      // Don't disconnect here, as we may be re-using the connection.
+      // Don't disconnect the socket here, as we may be re-using the connection.
       // In the case of `leaveLobby`, the client can manually disconnect.
     }
-    delete lobby.machines[socketId];
-    delete LOBBYMAN.machineConnections[socketId];
 
     if (getPlayerCountForLobby(lobby) === 0) {
       for (const spectator of Object.values(lobby.spectators)) {

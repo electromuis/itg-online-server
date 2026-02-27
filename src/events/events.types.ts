@@ -61,7 +61,7 @@ export interface CreateLobbyData {
 export interface JoinLobbyPayload {
   machine: Omit<Machine, 'socketId'>;
   code: LobbyCode;
-  password: string;
+  password?: string;
 }
 
 export interface JoinTemporaryLobbyPayload {
@@ -134,8 +134,11 @@ export interface LobbyStatePayload {
   players: Array<Player>;
   code: LobbyCode;
   songInfo?: SongInfo;
+  temporary: boolean;
 }
 
 export interface StartSongPayload {
-  phase: number;
+  phase: 
+    | 'ScreenGameplayWaiting' // Loading song
+    | 'ScreenGameplay' // Done loading
 }

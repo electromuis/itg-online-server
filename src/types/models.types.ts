@@ -50,7 +50,7 @@ export interface SongInfo {
 export interface Player {
   playerId: PlayerId;
   name: string;
-  ready: boolean;
+  ready: boolean|null;
   ping?: number;
 
   diffLevel?: number;
@@ -72,10 +72,15 @@ export interface Machine {
   screenName:
     | 'NoScreen'
     | 'ScreenSelectMusic'
+    | 'ScreenGameplayWaiting'
     | 'ScreenGameplay'
     | 'ScreenPlayerOptions'
     | 'ScreenEvaluation';
-  startPhase?: number;
+//   startPhase?:
+//     | 'Starting'
+//     | 'Loading'
+//     | 'Loaded'
+// 	| 'Done';
   socketId?: SocketId;
 }
 
@@ -86,6 +91,7 @@ export interface Lobby {
   password: string;
   machines: Record<SocketId, Machine>;
   spectators: Record<SocketId, Spectator>;
+  leftPlayers: Player[]
 
   songInfo?: SongInfo;
   
@@ -93,7 +99,13 @@ export interface Lobby {
   //  - true: Single song mode
   //  - false: Party mode
   temporary: boolean
-  startPhase?: number
+
+  state:
+    | 'ScreenSelectMusic'
+    | 'ScreenGameplayWaiting'
+    | 'Loading'
+    | 'ScreenGameplay'
+    | 'ScreenEvaluation';
 }
 
 export interface LobbyInfo {
@@ -120,7 +132,7 @@ export class LOBBYMAN {
   // Mapping from socketId to the lobby code for the spectators.
   static spectatorConnections: Record<SocketId, LobbyCode>;
 
-  static join(socketId: SocketId, code: LobbyCode) {
+  static join(socketId: SocketId, code: LobbyCode, machine: Machine) {
     if (!this.lobbies[code]) {
       console.warn(`Lobby ${code} does not exist`);
       return false;
@@ -134,10 +146,8 @@ export class LOBBYMAN {
 
     console.info(`Socket ${socketId} is joining room ${code}`);
     this.machineConnections[socketId] = code;
-    lobby.machines[socketId] = {
-      players: [],
-      screenName: 'NoScreen'
-    };
+    lobby.machines[socketId] = machine
+	lobby.machines[socketId].socketId = socketId;
     
     return true;
   }
@@ -169,18 +179,25 @@ export class LOBBYMAN {
       return;
     }
 
-    const sockets = Object.keys(this.lobbies[code].machines);
-    if (!sockets) {
-      throw new Error('No socket with code ' + code); // Shouldn't happen, since we set the code right before this
-    }
+    const lobby = this.lobbies[code];
 
-    if (!sockets.includes(socketId)) {
+    if (!lobby.machines[socketId]) {
       console.warn(`Socket ${socketId} is not in room ${code}`);
       return;
     }
     
     console.info(`Socket ${socketId} is leaving room ${code}`);
-    delete this.lobbies[code].machines[socketId];
+
+    // Keep the scores in view when the machine disconnects / crashes / leaves
+    const machine = this.lobbies[code].machines[socketId];
+    if(lobby.state in ['ScreenGameplay', 'ScreenEvaluation']) {
+      if(machine.screenName != 'ScreenEvaluation') {
+        machine.players.forEach(p => p.failed = true)
+        lobby.leftPlayers = [...lobby.leftPlayers, ...machine.players]
+      }
+    }
+
+    delete lobby.machines[socketId];
     if(this.machineConnections[socketId]) {
       delete this.machineConnections[socketId];
     }
