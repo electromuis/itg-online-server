@@ -224,12 +224,12 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if(notReady.length == 0) {
         lobby.state = 'Loading'
 
-        this.clients.sendAll({
+        this.clients.sendLobby({
           event: 'startSong',
           data: {
             phase: 'ScreenGameplayWaiting'
           }
-        })
+        }, code)
         
       } else {
         console.log('Waiting for everyone to be ready (1)')
@@ -243,12 +243,12 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if(notReady.length == 0) {
         lobby.state = 'ScreenGameplay' // Allow new song selection
         
-        this.clients.sendAll({
+        this.clients.sendLobby({
           event: 'startSong',
           data: {
             phase: 'ScreenGameplay'
           }
-        })
+        }, code)
       } else {
         console.log('Waiting for everyone to be ready (2)')
       }
