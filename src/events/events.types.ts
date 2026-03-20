@@ -132,6 +132,7 @@ export interface ClientDisconnectedPayload {
 
 export interface LobbyStatePayload {
   players: Array<Player>;
+  spectators: Array<string>;
   code: LobbyCode;
   songInfo?: SongInfo;
   temporary: boolean;

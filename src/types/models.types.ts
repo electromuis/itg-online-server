@@ -94,7 +94,6 @@ export interface Lobby {
   leftPlayers: Player[]
 
   songInfo?: SongInfo;
-  
   // temporary:
   //  - true: Single song mode
   //  - false: Party mode
@@ -106,6 +105,7 @@ export interface Lobby {
     | 'Loading'
     | 'ScreenGameplay'
     | 'ScreenEvaluation';
+	lastUpdate: number;
 }
 
 export interface LobbyInfo {

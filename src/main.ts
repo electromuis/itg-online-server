@@ -11,7 +11,7 @@ async function bootstrap() {
   LOBBYMAN.machineConnections = {};
   LOBBYMAN.spectatorConnections = {};
 
-  await app.listen(process.env.PORT || 3000);
+  await app.listen(process.env.PORT || 1337);
 
   console.log(`Application is running on: ${await app.getUrl()}`);
 }

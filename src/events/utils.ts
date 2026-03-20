@@ -21,7 +21,7 @@ export const RETAINED_PLAYER_KEYS: Array<keyof Player> = [
  * @returns True if the lobby exists and the password is correct, false
  *          otherwise.
  */
-export function canJoinLobby(code: string, password: string) {
+export function canJoinLobby(code: string, password: string|undefined) {
   // Does the lobby we're trying to join exist?
   const lobby = LOBBYMAN.lobbies[code.toUpperCase()];
   if (lobby === undefined) {
