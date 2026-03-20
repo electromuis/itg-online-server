@@ -29,7 +29,8 @@ export type EventType =
   | 'lobbyState'
   | 'selectSong'
   | 'responseStatus'
-  | 'startSong';
+  | 'startSong'
+  | 'sendScoreResult';
 
 export type EventData =
   | CreateLobbyData
@@ -46,7 +47,8 @@ export type EventData =
   | ReadyUpResultPayload
   | LobbyStatePayload
   | SelectSongPayload
-  | StartSongPayload;
+  | StartSongPayload
+  | SendScoreResultPayload;
 
 export interface EventMessage<T = EventData> {
   event: EventType;
@@ -142,4 +144,9 @@ export interface StartSongPayload {
   phase: 
     | 'ScreenGameplayWaiting' // Loading song
     | 'ScreenGameplay' // Done loading
+}
+
+export interface SendScoreResultPayload {
+	player: Player;
+	songInfo: SongInfo;
 }

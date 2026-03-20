@@ -82,7 +82,8 @@ export class EventsGateway
       updateMachine: this.updateMachine,
       lobbyState: this.lobbyState,
       selectSong: this.selectSong,
-      startSong: this.startSong
+      startSong: this.startSong,
+	  sendScoreResult: this.sendScoreResult
     };
 
     // Start the cleanup interval to remove stale lobbies
@@ -680,6 +681,28 @@ export class EventsGateway
       
       return { event: 'temporaryLobbiesUpdate', data: { lobbies: lobbiesResponse } };
     }
+  }
+
+  /**
+   * When the player is done with the song, this function will be called to explicily state the final score of the player.
+   * Spectators can use this event to process this final score
+   */
+  async sendScoreResult(socketId: SocketId, payload: UpdateMachinePayload): Promise<undefined> {
+	const code = LOBBYMAN.machineConnections[socketId];
+	if (!code) {
+	  return undefined;
+	}
+	const lobby = LOBBYMAN.lobbies[code];
+	if (lobby === undefined) {
+	  return undefined;
+	}
+
+	this.clients.sendLobby({
+		event: 'sendScoreResult',
+		data: payload
+	}, code)
+
+	return undefined;
   }
 
   private broadcastLobbyState(code: LobbyCode) {
