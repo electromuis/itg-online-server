@@ -38,7 +38,8 @@ import {
   LobbyStatePayload,
   SearchLobbyPayload,
   TemporaryLobbiesUpdatePayload,
-  StartSongPayload
+  StartSongPayload,
+  SendScoreResultPayload
 } from './events.types';
 import { merge, pick } from 'lodash';
 
@@ -413,14 +414,6 @@ export class EventsGateway
 
     LOBBYMAN.join(socketId, normalizedCode, machine);
 
-    // lobby.machines[socketId] = {
-    //   ...machine,
-    //   socketId,
-    // };
-    // ROOMMAN.join(socketId, normalizedCode);
-    // LOBBYMAN.machineConnections[socketId] = normalizedCode;
-
-
     this.updateLobbyActivity(normalizedCode);
 
     return {
@@ -687,7 +680,7 @@ export class EventsGateway
    * When the player is done with the song, this function will be called to explicily state the final score of the player.
    * Spectators can use this event to process this final score
    */
-  async sendScoreResult(socketId: SocketId, payload: UpdateMachinePayload): Promise<undefined> {
+  async sendScoreResult(socketId: SocketId, payload: SendScoreResultPayload): Promise<undefined> {
 	const code = LOBBYMAN.machineConnections[socketId];
 	if (!code) {
 	  return undefined;
@@ -727,6 +720,11 @@ export class EventsGateway
         if(!p.score) p.score = 0
         if(!p.exScore) p.exScore = 0
         if(!p.failed) p.failed = false
+		p.screenName = machine.screenName
+
+		if(machine.machineName) {
+			p.machineName = machine.machineName
+		}
 
         players.push(p)
       });
@@ -748,7 +746,7 @@ export class EventsGateway
           if (p1.score && p2.score) {
             return p2.score - p1.score;
           }
-          return p1.name > p2.name ? 1 : -1;
+          return p1.profileName > p2.profileName ? 1 : -1;
         }),
         spectators: Object.values(lobby.spectators).map((s) => s.profileName),
         songInfo,

@@ -10,7 +10,7 @@ import { EventMessage, EventType, ResponseStatusPayload } from './events.types';
  *  @see updateMachine */
 export const RETAINED_PLAYER_KEYS: Array<keyof Player> = [
   'playerId',
-  'name',
+  'profileName',
   'ready',
 ];
 

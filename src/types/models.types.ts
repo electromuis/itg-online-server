@@ -49,9 +49,11 @@ export interface SongInfo {
 
 export interface Player {
   playerId: PlayerId;
-  name: string;
+  profileName: string;
   ready: boolean|null;
   ping?: number;
+  machineName?: string;
+  screenName?: string;
 
   diffLevel?: number;
   diffType?: string;
@@ -76,11 +78,7 @@ export interface Machine {
     | 'ScreenGameplay'
     | 'ScreenPlayerOptions'
     | 'ScreenEvaluation';
-//   startPhase?:
-//     | 'Starting'
-//     | 'Loading'
-//     | 'Loaded'
-// 	| 'Done';
+  machineName?: string;
   socketId?: SocketId;
 }
 
