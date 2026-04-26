@@ -449,6 +449,9 @@ export class EventsGateway
         }
 
         // if joinable ...
+		if(!canJoinLobby(code, lobby.password)) {
+			continue;
+		}
         
         joinableCode = code;
         break;
@@ -480,7 +483,9 @@ export class EventsGateway
       if(!LOBBYMAN.join(socketId, joinableCode, machine)) {
         return responseStatusFailure('joinTemporaryLobby', 'Failed to join lobby');
       }
+
       this.broadcastLobbyState(joinableCode);
+      this.clients.broadcastTemporaryLobbies();
 
       return {
         event: 'responseStatus',
@@ -681,28 +686,35 @@ export class EventsGateway
    * Spectators can use this event to process this final score
    */
   async sendScoreResult(socketId: SocketId, payload: SendScoreResultPayload): Promise<undefined> {
-	const code = LOBBYMAN.machineConnections[socketId];
-	if (!code) {
-	  return undefined;
-	}
-	const lobby = LOBBYMAN.lobbies[code];
-	if (lobby === undefined) {
-	  return undefined;
-	}
+    const code = LOBBYMAN.machineConnections[socketId];
+    if (!code) {
+      return undefined;
+    }
+    const lobby = LOBBYMAN.lobbies[code];
+    if (lobby === undefined) {
+      return undefined;
+    }
 
-	this.clients.sendLobby({
-		event: 'sendScoreResult',
-		data: payload
-	}, code)
+    // Easy for handling scores in tournament setting
+    if(process.env.BROADCAST_SCORE == 'true') {
+      this.clients.sendAll({
+        event: 'sendScoreResult',
+        data: payload
+      })
+    } else {
+      this.clients.sendLobby({
+        event: 'sendScoreResult',
+        data: payload
+      }, code)
+    }
 
-	return undefined;
+    return undefined;
   }
 
   private broadcastLobbyState(code: LobbyCode) {
     const lobby = this.getLobbyState(code);
     if (lobby) {
       this.clients.sendLobby(lobby, code);
-      // this.clients.broadcastTemporaryLobbies();
     }
   }
 
