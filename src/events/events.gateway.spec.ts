@@ -60,7 +60,7 @@ describe('EventsGateway', () => {
             screenName: 'ScreenSelectMusic',
             players: [{
               playerId: 'P1',
-              name: 'teejusb',
+              profileName: 'teejusb',
               ready: false,
             }],
           },
@@ -166,7 +166,7 @@ describe('EventsGateway', () => {
             screenName: 'ScreenSelectMusic',
             players: [{
               playerId: 'P1',
-              name: 'teejusb',
+              profileName: 'teejusb',
               ready: false,
             }],
           },
@@ -178,7 +178,7 @@ describe('EventsGateway', () => {
           screenName: 'ScreenGameplay',
           players: [{
             playerId: 'P1',
-            name: 'teejusb',
+            profileName: 'teejusb',
             ready: false,
             score: 0.99,
             songProgression: {
@@ -188,7 +188,7 @@ describe('EventsGateway', () => {
           },
           {
             playerId: 'P2',
-            name: 'Moistbruh',
+            profileName: 'Moistbruh',
             ready: false,
             score: 0.99,
           }],
@@ -209,12 +209,12 @@ describe('EventsGateway', () => {
           screenName: 'ScreenGameplay',
           players: [{
             playerId: 'P1',
-            name: 'teejusb',
+            profileName: 'teejusb',
             ready: false,
           },
           {
             playerId: 'P2',
-            name: 'Moistbruh',
+            profileName: 'Moistbruh',
             ready: false,
             score: 0.99,
           }],
@@ -236,12 +236,12 @@ describe('EventsGateway', () => {
           screenName: 'ScreenSelectMusic',
           players: [{
             playerId: 'P1',
-            name: 'teejusb',
+            profileName: 'teejusb',
             ready: false,
           },
           {
             playerId: 'P2',
-            name: 'Moistbruh',
+            profileName: 'Moistbruh',
             ready: false,
           }],
         },
@@ -266,7 +266,7 @@ describe('EventsGateway', () => {
           screenName: 'ScreenSelectMusic',
           players: [{
             playerId: 'P1',
-            name: 'teejusb',
+            profileName: 'teejusb',
             ready: false,
           }],
         },
