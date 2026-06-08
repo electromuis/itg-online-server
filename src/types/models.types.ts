@@ -50,7 +50,10 @@ export interface SongInfo {
 export interface Player {
   playerId: PlayerId;
   profileName: string;
-  ready: boolean|null;
+  ready:
+     | 'Ready'
+	 | 'NotReady'
+	 | 'Unknown';
   ping?: number;
   machineName?: string;
   screenName?: string;

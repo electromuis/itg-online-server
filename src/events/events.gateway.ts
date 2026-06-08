@@ -320,7 +320,7 @@ export class EventsGateway
       })
 
       const notReady = players.filter(p => {
-        return !p.ready
+        return p.ready !== 'Ready'
       })
 
       if(notReady.length == 0) {
@@ -398,12 +398,13 @@ export class EventsGateway
     if (lobby === undefined) {
       return responseStatusFailure('joinLobby', 'Lobby not found');
     }
-    if (Object.keys(lobby.machines).length >= 4) {
-      return responseStatusFailure(
-        'joinLobby',
-        'Too many machines in the lobby',
-      );
-    }
+	
+    // if (Object.keys(lobby.machines).length >= 4) {
+    //   return responseStatusFailure(
+    //     'joinLobby',
+    //     'Too many machines in the lobby',
+    //   );
+    // }
 
     if (lobby.songInfo) {
       return responseStatusFailure(
