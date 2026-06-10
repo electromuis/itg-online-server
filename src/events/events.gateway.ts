@@ -320,7 +320,7 @@ export class EventsGateway
       })
 
       const notReady = players.filter(p => {
-        return p.ready !== 'Ready'
+        return !p.ready
       })
 
       if(notReady.length == 0) {
@@ -398,20 +398,19 @@ export class EventsGateway
     if (lobby === undefined) {
       return responseStatusFailure('joinLobby', 'Lobby not found');
     }
-	
-    // if (Object.keys(lobby.machines).length >= 4) {
-    //   return responseStatusFailure(
-    //     'joinLobby',
-    //     'Too many machines in the lobby',
-    //   );
-    // }
-
-    if (lobby.songInfo) {
+    if (Object.keys(lobby.machines).length >= 4) {
       return responseStatusFailure(
         'joinLobby',
-        'A song is already selected, please try later.',
+        'Too many machines in the lobby',
       );
     }
+
+    // if (lobby.songInfo) {
+    //   return responseStatusFailure(
+    //     'joinLobby',
+    //     'A song is already selected, please try later.',
+    //   );
+    // }
 
     LOBBYMAN.join(socketId, normalizedCode, machine);
 
@@ -556,7 +555,11 @@ export class EventsGateway
     socketId: SocketId,
     { songInfo }: SelectSongPayload,
   ): Promise<EventMessage<ResponseStatusPayload> | undefined> {
-    const code = LOBBYMAN.machineConnections[socketId];
+    let code = LOBBYMAN.machineConnections[socketId];
+    let isSpectator = false;
+    if(!code) {
+      code = LOBBYMAN.spectatorConnections[socketId];
+    }
     if (!code) {
       return responseStatusFailure('selectSong', 'Machine not found');
     }
@@ -564,12 +567,24 @@ export class EventsGateway
     if (lobby === undefined) {
       return responseStatusFailure('selectSong', 'Lobby not found');
     }
+
+    if(isSpectator) {
+      const magicSpectator = process.env.MAGIC_SPECTATOR;
+      if(!magicSpectator) {
+        return responseStatusFailure('selectSong', 'Spectator not allowed to pick song');
+      }
+      const spectator = lobby.spectators[socketId];
+      if(spectator.profileName != process.env.MAGIC_SPECTATOR) {
+        return responseStatusFailure('selectSong', 'Spectator not allowed to pick song');
+      }
+    }
+
     if (lobby.songInfo) {
-		if(lobby.state != 'ScreenGameplay') {
-      		return responseStatusFailure('selectSong', 'Song already selected');
-		} else {
-			lobby.state = 'ScreenSelectMusic';
-		}
+      if(lobby.state != 'ScreenGameplay') {
+            return responseStatusFailure('selectSong', 'Song already selected');
+      } else {
+        lobby.state = 'ScreenSelectMusic';
+      }
     }
     lobby.songInfo = songInfo;
     this.clients.sendLobby({
