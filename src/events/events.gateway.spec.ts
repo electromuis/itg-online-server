@@ -61,7 +61,7 @@ describe('EventsGateway', () => {
             players: [{
               playerId: 'P1',
               profileName: 'teejusb',
-              ready: false,
+              ready: 'NotReady',
             }],
           },
           password: '',
@@ -167,7 +167,7 @@ describe('EventsGateway', () => {
             players: [{
               playerId: 'P1',
               profileName: 'teejusb',
-              ready: false,
+              ready: 'NotReady',
             }],
           },
           password: '',
@@ -179,7 +179,7 @@ describe('EventsGateway', () => {
           players: [{
             playerId: 'P1',
             profileName: 'teejusb',
-            ready: false,
+            ready: 'NotReady',
             score: 0.99,
             songProgression: {
               currentTime: 1,
@@ -189,7 +189,7 @@ describe('EventsGateway', () => {
           {
             playerId: 'P2',
             profileName: 'Moistbruh',
-            ready: false,
+            ready: 'NotReady',
             score: 0.99,
           }],
         },
@@ -210,12 +210,12 @@ describe('EventsGateway', () => {
           players: [{
             playerId: 'P1',
             profileName: 'teejusb',
-            ready: false,
+            ready: 'NotReady',
           },
           {
             playerId: 'P2',
             profileName: 'Moistbruh',
-            ready: false,
+            ready: 'NotReady',
             score: 0.99,
           }],
         },
@@ -237,12 +237,12 @@ describe('EventsGateway', () => {
           players: [{
             playerId: 'P1',
             profileName: 'teejusb',
-            ready: false,
+            ready: 'NotReady',
           },
           {
             playerId: 'P2',
             profileName: 'Moistbruh',
-            ready: false,
+            ready: 'NotReady',
           }],
         },
       };
@@ -267,7 +267,7 @@ describe('EventsGateway', () => {
           players: [{
             playerId: 'P1',
             profileName: 'teejusb',
-            ready: false,
+            ready: 'NotReady',
           }],
         },
         password: '',
